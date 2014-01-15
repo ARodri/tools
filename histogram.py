@@ -18,7 +18,7 @@ oParser.add_option("-q", "--disableHistogram", action="store_false", dest="print
 
 (options,args) = oParser.parse_args()
 
-nBin = Decimal(options.bin)
+nBin = float(options.bin)
 
 data = {}
 
@@ -30,7 +30,7 @@ def sortData(unsortedData, byFrequency, isNumeric, reverseSort):
 		sortFunction = lambda tup: int(tup[1])
 	else:
 		if (isNumeric):
-			sortFunction = lambda tup: Decimal(tup[0])
+			sortFunction = lambda tup: float(tup[0])
 		else:
 			sortFunction = lambda tup: str(tup[0])
 		
@@ -43,7 +43,8 @@ def sortData(unsortedData, byFrequency, isNumeric, reverseSort):
 for line in sys.stdin:
 	val = line.strip('\n').strip('\r')
 	if (options.isNumeric):
-		nVal = (Decimal(val) - (Decimal(val) % nBin))
+		dVal = float(val)
+		nVal = (dVal - (dVal % nBin))
 		data[nVal] = data.get(nVal,0) + 1
 	else:
 		data[val] = data.get(val,0) + 1
