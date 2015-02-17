@@ -57,7 +57,7 @@ if (options.printHistogram):
 	maxValLen = max(map(lambda tup: len(str(tup[0])), sortedData))
 	maxFreqLen = max(map(lambda tup: len(str(tup[1])), sortedData))
 	
-	header = ["BIN", "FREQUENCY", "BIN %", "CUME", "1-CUME"]
+	header = ["BIN", "FREQ", "BIN %", "CUME", "1-CUME"]
 	if (options.prettyPrint):
 		header = ["BIN".rjust(maxValLen, ' '), "FREQUENCY".rjust(maxFreqLen, ' '), "BIN %", "CUME", "1-CUME"]
 	
@@ -113,8 +113,8 @@ if (options.printSummary):
 	# mean/stddev
 	if (options.isNumeric):
 		# mean
-		meanValue = Decimal(sum(map(lambda tup: tup[0]*tup[1], valueSorted)))/Decimal(total)
-		stdDev = math.sqrt( (1/Decimal(total)) * Decimal(sum( map(lambda tup: math.pow(tup[0]-meanValue,2)*tup[1] , valueSorted))))
+		meanValue = Decimal(str(sum(map(lambda tup: tup[0]*tup[1], valueSorted))))/Decimal(total)
+		stdDev = math.sqrt( (1/Decimal(total)) * Decimal(str(sum( map(lambda tup: math.pow(tup[0]-float(meanValue),2)*tup[1] , valueSorted)))))
 	print("Total Records: %s" % str(total))
 	print("Min: [%s]" % str(minValue))
 	print("Max: [%s]" % str(maxValue))
