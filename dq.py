@@ -4,7 +4,7 @@ import data_util
 from optparse import OptionParser
 from decimal import *
 
-USAGE = "usage: %prog [options] configFile"
+USAGE = "usage: %prog [options]"
 CONFIG_DELIM = "\t"
 
 oParser = OptionParser(usage=USAGE)
