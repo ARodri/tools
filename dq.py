@@ -7,55 +7,57 @@ from decimal import *
 
 USAGE = "usage: %prog [options] configFile"
 
-SAMPLE_CONFIG="""
-{
-    "delim": "|",
-    "header": true,
-    "fieldList": [],
-	
-	#built in: cardinality, histogram
-	
-    "metrics": {
-        "populated": [
-            {  
-                "name": "nonEmpty",
-                "missingValues":[""]
-            }
-        ],
-        "numeric": [
-            {  
-                "name": "noBinning",
-                "binning": -1
-            }
-        ],
-        "regex": [
-            {  
-                "name": "fieldType",
-                "regexes": ["^[0-9]+$", "^[a-zA-Z]+$", "^([a-zA-Z]|[0-9])+$"],
-                "labels": ["numeric", "alpha", "alphaNumeric"]
-            }
-        ],
-        "histogram": [
-			{
-				"name": "basic"
-			}
-        ]
-    },
-    "fieldMetrics": [
-		{ 
-			"field":"f1",
-			"metrics": [
-				"populated.nonEmpty", 
-				"histogram",
-				"numeric.noBinning",
-				"regex.fieldType",
-				"cardinality"
-			]
-		}
-	]
-	
-}
+SAMPLE_CONFIG_BASE="""
+	"delim": "|",
+	"header": true,
+	"fieldList": [] 
 """
+
+SAMPLE_CONFIG_METRICS="""
+	"metrics": {
+		"populated": [
+			{  
+				"name": "nonEmpty",
+				"missingValues":[""]
+			}
+		],
+		"numeric": [
+			{  
+				"name": "noBinning",
+				"binning": -1
+			}
+		],
+		"regex": [
+			{  
+				"name": "fieldType",
+				"regexes": ["^[0-9]+$", "^[a-zA-Z]+$", "^([a-zA-Z]|[0-9])+$"],
+				"labels": ["numeric", "alpha", "alphaNumeric"]
+			}
+		]
+	}
+"""
+
+def makeSampleConfig(fields):
+	return "{\n %s,\n%s,\n%s\n}" % (SAMPLE_CONFIG_BASE, SAMPLE_CONFIG_METRICS, getSampleFieldMetrics(fields))
+	
+def getSampleFieldMetrics(fields):
+	FIELD_METRICS = ["populated.nonEmpty", "numeric.noBinning", "regex.fieldType", "histogram", "cardinality", "length"]
+	
+	field_metric_strs = ['\t"fieldMetrics": [']
+	for field in fields:
+		field_metric_strs.append('\t\t{')
+		field_metric_strs.append('\t\t\t"field":"%s",' % field)
+		field_metric_strs.append('\t\t\t"metrics": [')
+		for metric in FIELD_METRICS:
+			field_metric_strs.append('\t\t\t\t"%s",' % metric)
+		field_metric_strs[-1] = field_metric_strs[-1][:-1] # strip the last ","
+		field_metric_strs.append('\t\t\t]')
+		field_metric_strs.append('\t\t},')
+	field_metric_strs[-1] = field_metric_strs[-1][:-1] # strip the last ","
+	field_metric_strs.append('\t]')
+	return '\n'.join(field_metric_strs)
+
+SAMPLE_CONFIG = makeSampleConfig(['f1','f2'])
 
 HIST_SORT_FREQ=0
 HIST_SORT_VAL=1
@@ -187,7 +189,24 @@ class CardinalityFactory:
 		
 	def fromJSON(self):
 		return self.produce()
-	
+
+class Length:
+	hist = None
+	def __init__(self):
+		self.hist = Numeric()
+	def update(self,value):
+		self.hist.update(len(value))
+	def __str__(self):
+		return str(self.hist)
+
+class LengthFactory:
+	def __init__(self, name=None, jsonConfig=None):
+		self.name = name if name != None else "length"
+		self.jsonConfig = jsonConfig
+	def produce(self):
+		return Length()
+	def fromJSON(self):
+		return self.produce()
 
 class RegexMatcher:
 
@@ -469,8 +488,6 @@ def parseDataQualityConfig(configJSONFile):
 		
 		configString = configFile.read()
 		jconfig = json.loads(configString)
-		delim = jconfig.get('delim')
-		delim = delim if delim != '' else '|'
 	
 		hasHeader = jconfig.get('header')
 		hasHeader = hasHeader if hasHeader != '' else True
@@ -485,7 +502,8 @@ def parseDataQualityConfig(configJSONFile):
 		
 		metricFactories = {
 			"histogram" : HistogramFactory("histogram"),
-			"cardinality": CardinalityFactory("cardinality")
+			"cardinality": CardinalityFactory("cardinality"),
+			"length": LengthFactory("length")
 		}
 		for configType in jconfig.get('metrics'):
 			for config in jconfig.get('metrics').get(configType):
@@ -508,7 +526,7 @@ def parseDataQualityConfig(configJSONFile):
 			for metric in fieldConfig.get('metrics'):
 				metrics.append((field, metric, metricFactories[metric].produce()))
 				
-		return (delim, hasHeader, fieldList, metrics)
+		return (hasHeader, fieldList, metrics)
 		
 def main():
 	oParser = OptionParser(add_help_option=False, usage=USAGE)
@@ -517,6 +535,8 @@ def main():
 	oParser.add_option("-o", "--outputFile", default="-", help="output file. [default: stdout]")
 	#oParser.add_option("-p", "--prettyPrint", action="store_true", dest="prettyPrint", default=False, help="pretty print. [default: %default]")
 	oParser.add_option("-h", "--help", action="store_true", default=False, help="print this message")
+	oParser.add_option("-d", "--delim", default="|", help="delimeter. [default: %default]")
+	oParser.add_option("-s", "--sampleConfig", action="store_true", default=False, help="Generate a sample config based on the header. Outputs to stdout.")
 	(options,args) = oParser.parse_args()
 	
 	if options.help:
@@ -525,14 +545,23 @@ def main():
 		print SAMPLE_CONFIG
 		sys.exit(0)
 	
-	if len(args) == 0:
-		oParser.error("missing configuration file")
-	configFile = args[0]
 	
-	(delim, hasHeader, fieldList, metrics) = parseDataQualityConfig(configFile)
 	
-	dqr = DataQuality(options.inputFile, options.outputFile, metrics, hasHeader, fieldList, delim)
-	dqr.run()
+	if options.sampleConfig:
+		header = []
+		fin = sys.stdin if options.inputFile == '-' else open(options.inputFile,'r')
+		header = fin.readline().strip().split(options.delim)
+		fin.close()
+		print makeSampleConfig(header)
+	else:
+		if len(args) == 0:
+			oParser.error("missing configuration file")
+		configFile = args[0]
+
+		(hasHeader, fieldList, metrics) = parseDataQualityConfig(configFile)
+		dqr = DataQuality(options.inputFile, options.outputFile, metrics, hasHeader, fieldList, options.delim)
+		dqr.run()
+
 		
 	
 
@@ -545,12 +574,12 @@ if __name__=='__main__':
 #for line in fin:
 #  parsed = line.strip('\n').strip('\r').split(options.delim)
 #  if len(parsed) != expected_size:
-###    nonConform += 1
+###	nonConform += 1
 #  else:
-#    for i in range(0,len(parsed)):
-#       if parsed[i].strip() != "":
-#         cnts[i] = cnts[i] + 1
-#    total += 1
+#	for i in range(0,len(parsed)):
+#	   if parsed[i].strip() != "":
+#		 cnts[i] = cnts[i] + 1
+#	total += 1
 #fin.close()
 
 #outputHeader = ["FIELD", "MISSING", "POPULATED", "PERCENT_POPULATED"]
@@ -576,10 +605,10 @@ if __name__=='__main__':
 #  perc_pop = (Decimal(pop) / Decimal(total)).quantize(Decimal(options.quantize))
 
 #  if options.prettyPrint:
-#    field = str(field).rjust(keyFieldLen,' ')
-#    missing = str(missing).rjust(misFieldLen,' ')
-#    pop = str(pop).rjust(popFieldLen,' ')
-#    perc_pop = str(perc_pop).rjust(perFieldLen,' ')
+#	field = str(field).rjust(keyFieldLen,' ')
+#	missing = str(missing).rjust(misFieldLen,' ')
+#	pop = str(pop).rjust(popFieldLen,' ')
+#	perc_pop = str(perc_pop).rjust(perFieldLen,' ')
 
   #fout.write(options.outputDelim.join([field, str(missing), str(pop), str(perc_pop)]) + "\n")
 #fout.write("Total Records: %s\n" % total)
