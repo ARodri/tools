@@ -41,8 +41,6 @@ for line in sys.stdin:
 	if not options.binary:
 		allValues.add(valStr)
 
-print data
-
 sortedKeys = data.keys()
 sortedKeys.sort()
 
@@ -53,7 +51,7 @@ header = ["KEY", "BIN", "FREQ", "BIN_%", "CUME", "1-CUME"]
 
 maxKeyLen = max([ len(str(k)) for k in data.keys() ] + [len(header[0])])
 maxValLen = max([ len(str(v)) for v in data[k] for k in data.keys() ] + [len(header[1])])
-maxFreqLen = max([ len(str(data[k][v])) for v in data[k].keys() for k in data.keys() ] + [len(header[2])])
+maxFreqLen = max([ len(str(data[k].get('v',''))) for v in sortedAllValues for k in sortedKeys ] + [len(header[2])])
 
 if (options.prettyPrint):
 	header = ["KEY".rjust(maxKeyLen,' '), "BIN".rjust(maxValLen, ' '), "FREQUENCY".rjust(maxFreqLen, ' '), "BIN_%", "CUME", "1-CUME"]
@@ -61,7 +59,7 @@ if (options.prettyPrint):
 print(options.delimiter.join(header))
 for key in sortedKeys:
 	cumeSeen = 0
-	total = sum([ data[key][val] for val in data[key] ])
+	total = sum([ data[key][v] for v in data[key] ])
 	for val in sortedAllValues:
 		freq = data[key].get(val, 0)
 		
@@ -69,15 +67,15 @@ for key in sortedKeys:
 		binPerc = (Decimal(freq) / total).quantize(Decimal('0.0000'))
 		cumePerc = (Decimal(cumeSeen) / total).quantize(Decimal('0.0000'))
 		m1CumePerc = 1-cumePerc
+		sval = str(val)
+		skey = str(key)
 		if (options.prettyPrint):
-			key = str(key).rjust(maxKeyLen,' ')
-			val = str(val).rjust(maxValLen, ' ')
+			skey = skey.rjust(maxKeyLen,' ')
+			sval = sval.rjust(maxValLen, ' ')
 			freq = str(freq).rjust(maxFreqLen, ' ')
 			binPerc = str(binPerc).rjust(max(len(header[3]), len(str(binPerc))), ' ')
 			cumePerc = str(cumePerc).rjust(max(len(header[4]), len(str(cumePerc))), ' ')
 			m1CumePerc = str(m1CumePerc).rjust(max(len(header[5]), len(str(m1CumePerc))), ' ')
-			
-		print(options.delimiter.join([ str(v) for v in [ key,val,freq,binPerc,cumePerc,m1CumePerc ] ]))
+		print(options.delimiter.join([ str(v) for v in [ skey,sval,freq,binPerc,cumePerc,m1CumePerc ] ]))
 	if (options.prettyPrint):
 		print ""
-print data
