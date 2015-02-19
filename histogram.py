@@ -2,19 +2,27 @@
 
 import sys, math
 from decimal import *
-from optparse import OptionParser
+from optparse import OptionParser, OptionGroup
 
 USAGE = "usage: %prog [options]"
 
 oParser = OptionParser(usage=USAGE)
-oParser.add_option("-n", "--numeric", action="store_true", dest="isNumeric", default=False, help="treat input as numeric. [default: %default]")
-oParser.add_option("-f", "--sortByFrequency", action="store_true", dest="sortByFrequency", default=False, help="sort by frequency. [default: %default]")
-oParser.add_option("-p", "--prettyPrint", action="store_true", dest="prettyPrint", default=False, help="pretty print. [default: %default]")
-oParser.add_option("-d", "--delim", default="\t", dest="delimiter", help="output delimiter: [Default: tab]")
-oParser.add_option("-b", "--bin", default="1", dest="bin", help="bin numeric values by X: [Default: %default]")
-oParser.add_option("-r", "--reverse", action="store_true", dest="reverseSort", default=False, help="sort output in reverse. [default: %default]")
-oParser.add_option("-s", "--summary", action="store_true", dest="printSummary", default=False, help="output summary statistics (min,max,median,mode,mean,stddev). Note: calculations are done prior to any binning. [default: %default]")
-oParser.add_option("-q", "--disableHistogram", action="store_false", dest="printHistogram", default=True, help="output histogram. [default: True]")
+
+group = OptionGroup(oParser, 'Primary')
+group.add_option("-n", "--numeric", action="store_true", dest="isNumeric", default=False, help="treat input as numeric. [default: %default]")
+group.add_option("-f", "--sortByFrequency", action="store_true", dest="sortByFrequency", default=False, help="sort by frequency. [default: %default]")
+group.add_option("-p", "--prettyPrint", action="store_true", dest="prettyPrint", default=False, help="pretty print. [default: %default]")
+group.add_option("-d", "--delim", default="\t", dest="delimiter", help="output delimiter: [Default: tab]")
+group.add_option("-b", "--bin", default="1", dest="bin", help="bin numeric values by X: [Default: %default]")
+group.add_option("-r", "--reverse", action="store_true", dest="reverseSort", default=False, help="sort output in reverse. [default: %default]")
+group.add_option("-s", "--summary", action="store_true", dest="printSummary", default=False, help="output summary statistics (min,max,median,mode,mean,stddev). Note: calculations are done prior to any binning. [default: %default]")
+group.add_option("-q", "--disableHistogram", action="store_false", dest="printHistogram", default=True, help="output histogram. [default: True]")
+oParser.add_option_group(group)
+
+group = OptionGroup(oParser, 'Populated/Non-Empty')
+group.add_option('-e', '--mapEmpty', action='store_true', dest='mapEmpty', default=False, help="Maps values to 1/0 for empty, non-empty. [default: %default]")
+group.add_option('-k', '--fieldDelim', default=None, dest="fieldDelim", help="field delimiter to use to map fields to 1/0. [default: %default]")
+oParser.add_option_group(group)
 
 (options,args) = oParser.parse_args()
 
@@ -46,6 +54,13 @@ for line in sys.stdin:
 		dVal = float(val)
 		nVal = (dVal - (dVal % nBin))
 		data[nVal] = data.get(nVal,0) + 1
+	elif (options.mapEmpty):
+		if options.fieldDelim != None:
+			mVal = options.fieldDelim.join([ "1" if v != "" else "0" for v in val.split(options.fieldDelim) ])
+			data[mVal] = data.get(mVal,0) + 1
+		else:
+			mVal = "1" if val != "" else "0"
+			data[mVal] = data.get(mVal,0) + 1
 	else:
 		data[val] = data.get(val,0) + 1
 
