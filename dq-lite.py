@@ -1,6 +1,6 @@
 #!/usr/bin/python
 import sys
-import data_util
+from lib import data_util
 from optparse import OptionParser
 from decimal import *
 

@@ -99,7 +99,9 @@ if (options.printSummary):
 	valueSorted = sortData(data, False, options.isNumeric, False)
 	minValue = None
 	maxValue = None
+	lowerIQR = None
 	medianValue = None
+	higherIQR = None
 	meanValue = None
 	modeValue = None
 	modeBinCnt = None
@@ -111,15 +113,21 @@ if (options.printSummary):
 		minValue = valueSorted[0][0]
 		maxValue = valueSorted[-1][0]
 
-	# Get median
+	# Get median,
+	lowerIQRTarget = int(float(total)*.25)
 	medianTarget = int(total)/2
-	medianCnt = 0
+	higherIQRTarget= int(float(total)*.75)
+	seen = 0
 	for (val, cnt) in valueSorted:
-		medianCnt += cnt
-		if (medianCnt >= medianTarget):
+		seen += cnt
+		if (lowerIQR == None and seen >= lowerIQRTarget):
+			lowerIQR = val
+		if (medianValue == None and seen >= medianTarget):
 			medianValue = val
+		if (higherIQR == None and seen >= higherIQRTarget):
+			higherIQR = val
 			break
-	
+
 	# get mode
 	
 	(modeValue,modeBinCnt) = sortData(data, True, options.isNumeric, True)[0]
@@ -131,10 +139,15 @@ if (options.printSummary):
 		meanValue = Decimal(str(sum(map(lambda tup: tup[0]*tup[1], valueSorted))))/Decimal(total)
 		stdDev = math.sqrt( (1/Decimal(total)) * Decimal(str(sum( map(lambda tup: math.pow(tup[0]-float(meanValue),2)*tup[1] , valueSorted)))))
 	print("Total Records: %s" % str(total))
+	print("")
 	print("Min: [%s]" % str(minValue))
-	print("Max: [%s]" % str(maxValue))
+	print("Low IQR: [%s]" % str(lowerIQR))
 	print("Median: [%s]" % str(medianValue))
+	print("High IQR: [%s]" % str(higherIQR))
+	print("Max: [%s]" % str(maxValue))
+	print("")
 	print("Mode: [%s] - %s (%s%%)" % (str(modeValue), str(modeBinCnt), str(modeBinPct)))
+	print("")
 	print("Mean: %s" % str(meanValue))
 	print("StdDev: %s" % str(stdDev))
 
