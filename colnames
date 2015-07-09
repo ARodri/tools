@@ -1,0 +1,12 @@
+#!/bin/bash
+
+set -euo pipefail
+
+if [ $# -eq 1 ]; then
+	DELIM="|"
+else
+	DELIM=$2
+fi
+FILE=$1
+
+head -1 $FILE | sed 's/'$DELIM'/\n/g' | cat -n

@@ -1,0 +1,5 @@
+#!/bin/bash
+
+set -euo pipefail
+
+awk '{if(NR==1){HDR=$0;print} else if ($0 != HDR) {print}}'

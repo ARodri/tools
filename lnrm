@@ -1,0 +1,5 @@
+#!/bin/bash
+set -euo pipefail
+TARGET=$2
+SOURCE=$1
+rm -f $TARGET; ln -s $SOURCE $TARGET

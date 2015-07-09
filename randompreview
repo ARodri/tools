@@ -1,0 +1,13 @@
+#!/bin/bash
+
+set -euo pipefail
+
+if [ $# -eq 1 ]; then
+	CNT="1000"
+else
+	CNT=$2
+fi
+FILE=$1
+
+
+cat <(head -1 $FILE) <(tail -n+2 $FILE | shuf -n$CNT)
